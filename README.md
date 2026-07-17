@@ -1,95 +1,89 @@
-# Jenkins CI Practice Project 🚀
+# Jenkins Master-Agent Setup on AWS EC2 🚀
 
-A hands-on DevOps practice project demonstrating a basic CI pipeline setup using **AWS EC2**, **Jenkins**, and **GitHub**.
+A hands-on practice project setting up a **Jenkins Master-Agent (Slave) architecture** using two AWS EC2 instances, connected to a GitHub repository, with builds running on the agent node.
 
-## 📌 Project Overview
+## 📌 What This Project Does
 
-This project simulates a simple Continuous Integration (CI) workflow:
+- Two AWS EC2 (Ubuntu) instances were launched: one as the **Jenkins Master**, one as the **Jenkins Agent (Slave)**.
+- Jenkins was installed on the Master.
+- The Agent was connected to the Master via SSH as a **Permanent Agent node**.
+- A Jenkins job (`jenkins-github`) was created, connected to a GitHub repository.
+- Builds were triggered and verified as running successfully.
 
-1. A sample static website (`index.html` + `style.css`) is hosted on GitHub.
-2. Jenkins, self-hosted on an AWS EC2 instance, pulls the code from this repository.
-3. Every build checks out the latest code and runs verification steps.
-4. A GitHub webhook triggers Jenkins automatically whenever new code is pushed.
+## 🛠️ Tech Used
 
-This project was built to understand the fundamentals of CI/CD tooling — setting up a Jenkins server from scratch, connecting it to source control, and triggering automated builds.
+- AWS EC2 (Ubuntu)
+- Jenkins
+- SSH (Master → Agent connection)
+- GitHub
 
-## 🛠️ Tech Stack
+## 🔧 Steps I Followed
 
-- **AWS EC2** (Ubuntu) — hosting the Jenkins server
-- **Jenkins** — CI automation server
-- **GitHub** — source code repository & webhook trigger
-- **HTML/CSS** — sample application being built
+### 1. Launched two EC2 instances
+- `Jenkins-master` and `Jenkins-slave`, both Ubuntu, `t3.micro`
+- Same key pair used for both instances
+- Security group allowed SSH (22) and Jenkins port (8080)
 
-## ⚙️ Architecture
+![EC2 Instances](screenshots/ec2-instances.png)
 
-```
-Developer → git push → GitHub Repository
-                              │
-                              ▼ (webhook trigger)
-                    Jenkins Server (AWS EC2)
-                              │
-                              ▼
-                    Freestyle Build Job
-                (checkout code → verify files → run build steps)
-                              │
-                              ▼
-                      Console Output / Build Status
-```
-
-## 🔧 Setup Steps
-
-### 1. Provisioned AWS Infrastructure
-- Launched an Ubuntu EC2 instance
-- Configured security group rules:
-  - Port 22 (SSH) restricted to my IP
-  - Port 8080 (Jenkins UI) open for webhook access
-
-### 2. Installed Jenkins
+### 2. Installed Jenkins on the Master instance
 - Installed Java (OpenJDK)
-- Added the official Jenkins APT repository and signing key
-- Installed and started the Jenkins service via `systemctl`
+- Added the Jenkins APT repository and signing key
+- Installed Jenkins and started the service
+- Unlocked Jenkins using the initial admin password and installed suggested plugins
 
-### 3. Configured Jenkins
-- Unlocked Jenkins using the initial admin password
-- Installed suggested plugins
-- Created an admin user
+### 3. Installed Java and Git on the Agent (Slave) instance
+- The agent only needed Java (to run the Jenkins agent process) and Git (to check out code)
 
-### 4. Connected to GitHub
-- Created this public repository containing the sample website
-- Added the repository URL under Jenkins' **Source Code Management**
-- Configured a **GitHub webhook** pointing to:
-  ```
-  http://<jenkins-server-ip>:8080/github-webhook/
-  ```
-- Enabled **"GitHub hook trigger for GITScm polling"** in the job configuration
+### 4. Connected the Agent to the Master
+- Generated SSH credentials in Jenkins using the `ubuntu` username and the EC2 key pair
+- Went to **Manage Jenkins → Nodes → New Node**, created a Permanent Agent named `jenkins-slave`
+- Configured:
+  - **Remote root directory:** `/home/ubuntu/jenkins-agent`
+  - **Labels:** `slave-1`
+  - **Usage:** Use this node as much as possible
+  - **Launch method:** Launch agents via SSH
+  - **Host:** Agent's private IP (`172.31.24.230`)
+  - **Credentials:** `ubuntu` (SSH private key)
+  - **Host Key Verification Strategy:** Non verifying Verification Strategy
 
-### 5. Created a Freestyle Build Job
-- Job pulls the latest code from GitHub on every trigger
-- Executes shell build steps to verify the files and simulate a build process
+![Node Configuration](screenshots/node-config-1.png)
+![Node Configuration - Full](screenshots/node-config-2.png)
+
+### 5. Verified the Agent connected successfully
+- Checked **Manage Jenkins → Nodes** — both **Built-In Node** and **jenkins-slave** showed as connected (In sync)
+
+![Nodes List](screenshots/nodes-list.png)
+
+### 6. Created a Jenkins job connected to GitHub
+- Job name: `jenkins-github`
+- Connected to the GitHub repository under Source Code Management
+- Ran builds and confirmed successful completion
+
+![Jenkins Dashboard](screenshots/jenkins-dashboard.png)
+
+### 7. Ran multiple builds and verified success
+- Builds #13, #14, #15 all completed successfully
+- Confirmed via Build History and Console Output
+
+![Build History](screenshots/build-history.png)
 
 ## ✅ What I Practiced
 
-- Setting up a Jenkins server manually on a cloud VM
-- Resolving real-world server issues (e.g., GPG signing key rotation/expiry during `apt` installs)
-- Connecting Jenkins to a GitHub repository
-- Configuring webhooks for automatic build triggers
-- Running and monitoring builds via Jenkins' console output
-- Understanding the basic building blocks of a CI pipeline
+- Setting up Jenkins Master and Agent on separate EC2 instances
+- Connecting an Agent node to Master via SSH
+- Troubleshooting real SSH/authentication issues (correct username for Ubuntu, correct private key format)
+- Connecting a Jenkins job to GitHub
+- Running and verifying builds on the agent node
 
 ## 📂 Repository Contents
 
-| File | Description |
-|------|--------------|
-| `index.html` | Sample webpage used as the build artifact |
+| File/Folder | Description |
+|---|---|
+| `index.html` | Sample webpage used as the build source |
 | `style.css` | Styling for the sample webpage |
-| `README.md` | Project documentation (this file) |
-
-## 🔭 Next Steps / Future Improvements
-
-- Add a `Jenkinsfile` to convert this into a scripted/declarative Pipeline job
-- Add automated deployment of the site to an S3 bucket or a web server
-- Add build notifications (Slack/Email) on failure
-- Add parameterized builds and multi-branch pipeline support
+| `screenshots/` | Screenshots of the Jenkins setup |
+| `README.md` | This file |
 
 ---
-*This project was built as a personal learning exercise to understand Jenkins CI fundamentals using free-tier AWS infrastructure.*
+*Personal practice project to learn Jenkins Master-Agent setup using AWS EC2.*
